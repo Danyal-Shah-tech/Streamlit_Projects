@@ -50,7 +50,6 @@ with st.form(key='Chat_Form', clear_on_submit=True):
 
     if submit_button:
         handle_input(user_input)
-        st.experimental_rerun()
 
 # Optional: Add a button to clear chat history
 if st.button("Clear Chat History"):
