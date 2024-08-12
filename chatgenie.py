@@ -1,23 +1,20 @@
-import google.generativeai as genai
 import streamlit as st
+import google.generativeai as genai
 
-# Configure the API key
+# Configure the Generative AI model
 genai.configure(api_key="AIzaSyAQKuYgRUUYyJiiqrXLoW0Hmx-UVb_OcsA")
 
-# Initialize the Generative Model
+# Initialize the model
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# Function to get response from the model
-def getResponseFromModel(user_input):
-    response = model.generate_content(user_input)
+# Function to generate a response from the model
+def generate_response(prompt):
+    response = model.generate_content(prompt)
     return response.text
 
 # Streamlit UI
-st.set_page_config(page_title="ChatGenie", page_icon=":robot:", layout="wide")
-st.title("🧞‍♂️ ChatGenie 🧞‍♂️")
-st.write("**Welcome to ChatGenie!** Your personal chatbot powered by the Gemini LLM Model.")
+st.title("🤖 ChatGenie with Google Gemini")
 
-# Define a sidebar for additional features and information
 st.sidebar.header("ChatGenie Features")
 st.sidebar.write("""
 - **Real-time responses**: Get instant answers to your queries.
@@ -25,33 +22,74 @@ st.sidebar.write("""
 - **Customization options**: Adjust the model's behavior through settings.
 """)
 
-# Create a chat history container
-if 'messages' not in st.session_state:
-    st.session_state.messages = []
+# Define session state variables
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "user_input" not in st.session_state:
+    st.session_state.user_input = ""
+if "form_submitted" not in st.session_state:
+    st.session_state.form_submitted = False
 
-# Function to handle user input and responses
-def handle_input(user_input):
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        response = getResponseFromModel(user_input)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+# Custom CSS for styling
+st.markdown("""
+    <style>
+    .input-box {
+        position: fixed;
+        bottom: 0;
+        width: calc(100% - 20px);
+        padding: 10px;
+        background-color: #fff;
+        border-top: 1px solid #e0e0e0;
+        box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    .message {
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin-bottom: 10px;
+        max-width: 80%;
+        display: inline-block;
+    }
+    .bot-message {
+        background-color: #007bff;
+        color: white;
+        align-self: flex-start;
+    }
+    .user-message {
+        background-color: #28a745;
+        color: white;
+        align-self: flex-end;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Display the chat history
-for message in st.session_state.messages:
-    if message['role'] == 'user':
-        st.markdown(f"<div style='text-align: right; background-color: #e1f5fe; border-radius: 10px; padding: 10px;'><strong>You:</strong> {message['content']}</div>", unsafe_allow_html=True)
+# Display chat history
+st.markdown('<div class="chat-box">', unsafe_allow_html=True)
+for speaker, message in st.session_state.chat_history:
+    if speaker == "You":
+        st.write(f"👤 **{speaker}:** {message}", unsafe_allow_html=True)
     else:
-        st.markdown(f"<div style='text-align: left; background-color: #f1f8e9; border-radius: 10px; padding: 10px;'><strong>ChatGenie:</strong> {message['content']}</div>", unsafe_allow_html=True)
+        st.write(f"🤖 **{speaker}:** {message}", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# Streamlit form for user input
-with st.form(key='Chat_Form', clear_on_submit=True):
-    user_input = st.text_input("Type your message here:", max_chars=2000)
-    submit_button = st.form_submit_button("Send ➡️")
+# Input box at the bottom
+with st.container():
+    with st.form(key='chat_form', clear_on_submit=True):
+        st.session_state.user_input = st.text_input("Type your message here... 💬", max_chars=1000)
+        submit_button = st.form_submit_button("Send 📤")
+        
+        if submit_button:
+            if st.session_state.user_input:
+                st.session_state.form_submitted = True
+            else:
+                st.warning("Please enter a message before sending. 🚫")
 
-    if submit_button:
-        handle_input(user_input)
+if st.session_state.form_submitted:
+    response = generate_response(st.session_state.user_input)
+    st.session_state.chat_history.append(("You", st.session_state.user_input))
+    st.session_state.chat_history.append(("ChatBot", response))
+    st.session_state.form_submitted = False  # Reset flag after handling
 
-# Optional: Add a button to clear chat history
-if st.button("Clear Chat History"):
-    st.session_state.messages = []
-    st.experimental_rerun()
+# Button to clear chat history
+if st.button("Clear Chat 🧹"):
+    st.session_state.chat_history = []
